@@ -1,0 +1,72 @@
+---
+title: "DSS"
+output: html_document
+date: "2023-01-15"
+editor_options: 
+  chunk_output_type: console
+---
+# Differential Methylation Anlaysis using DSS on chromosome 22
+
+Loading library
+```{r warning=FALSE, message=FALSE}
+library(DSS)
+library(bsseq)
+library(tidyverse)
+```
+
+Data already loaded
+
+Sub-setting Data
+```{r warning=FALSE, message=FALSE}
+t.cpg_1 <- t.cpg %>% 
+  select(chr, start, read_coverage, Nmodified)
+n.cpg_1 <- n.cpg %>% 
+  select(chr, start, read_coverage, Nmodified)
+```
+
+Filtering the data for chromosome 22
+```{r warning=FALSE, message=FALSE}
+test_1 <- t.cpg_1 %>% 
+  filter(chr=="chr22")
+test_2 <- n.cpg_1 %>% 
+  filter(chr=="chr22")
+```
+
+Renaming columns
+```{r warning=FALSE, message=FALSE}
+colnames(test_1)[3]="N"
+colnames(test_1)[4]="X"
+colnames(test_1)[2]="pos"
+colnames(test_2)[3]="N"
+colnames(test_2)[4]="X"
+colnames(test_2)[2]="pos"
+```
+
+Creating a BS object
+```{r warning=FALSE, message=FALSE}
+require(bsseq)
+v <- c("tumour", "normal")
+BSobj <- makeBSseqData(list(test_1, test_2), v) 
+BSobj
+```
+
+Performing DML test
+```{r warning=FALSE, message=FALSE, results='hide'}
+dmltest <- DMLtest(BSobj, group1 = c("tumour"), group2 = c("normal"), smoothing = TRUE)
+dmls <- callDML(dmltest, p.threshold = 0.001)
+```
+
+```{r warning=FALSE, message=FALSE}
+head(dmls)
+```
+
+DMR detection
+```{r warning=FALSE, message=FALSE}
+dmrs <- callDMR(dmltest, p.threshold = 0.01)
+head(dmrs)
+```
+
+Plot
+```{r warning=FALSE, message=FALSE}
+showOneDMR(dmrs[1,], BSobj)
+```
