@@ -1,0 +1,198 @@
+---
+title: "Annotation"
+output: html_document
+date: '2023-01-06'
+editor_options: 
+  chunk_output_type: console
+---
+
+## Genomation
+
+Downloading genomation package
+```{r warning=FALSE, message=FALSE}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("genomation")
+```
+
+Downloading Genomic Ranges package
+```{r warning=FALSE, message=FALSE}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("GenomicRanges")
+```
+
+Loading Library
+```{r warning=FALSE, message=FALSE}
+library(genomation)
+library(GenomicRanges)
+library(tidyverse)
+library(ggplot2)
+```
+
+Data was already downloaded
+
+Filtering datasets and removing the random chromosomes
+
+n.cpg
+```{r warning=FALSE, message=FALSE}
+n_filtered <- subset(n.cpg, !(endsWith(V1, '_random') | endsWith(V1, 'v1') | endsWith(V1, 'v2') | endsWith(V1, 'BV')))
+```
+
+t.cpg
+```{r warning=FALSE, message=FALSE}
+t_filtered <- subset(t.cpg, !(endsWith(V1, '_random') | endsWith(V1, 'v1') | endsWith(V1, 'v2')))
+```
+
+Since, we have already loaded the files, we cannot use the default genomation's command to convert the file into genomic ranges. As the input of the genomation is a GRange object we will convert the loaded files into a GRange object
+
+n.cpg into GRange Object
+```{r warning=FALSE, message=FALSE}
+n_grange <- makeGRangesFromDataFrame(n_filtered, 
+                                     keep.extra.columns = TRUE,
+                                     ignore.strand = TRUE,
+                                     seqinfo = NULL,
+                                     seqnames.field = "V1",
+                                     start.field = "V2",
+                                     end.field = "V3",
+                                     strand.field = "V6",
+                                     starts.in.df.are.0based = FALSE)
+```
+
+t.cpg into GRange Object
+```{r warning=FALSE, message=FALSE}
+t_grange <- makeGRangesFromDataFrame(t_filtered, 
+                                     keep.extra.columns = TRUE,
+                                     ignore.strand = TRUE,
+                                     seqinfo = NULL,
+                                     seqnames.field = "V1",
+                                     start.field = "V2",
+                                     end.field = "V3",
+                                     strand.field = "V6",
+                                     starts.in.df.are.0based = FALSE)
+```
+
+Annotating with generic features
+
+t.cpg
+```{r warning=FALSE, message=FALSE}
+t_annotate_1 <- annotateWithFeature(t_grange, cpgi, intersect.chr = TRUE)
+t_annotate_1
+```
+
+```{r warning=FALSE, message=FALSE}
+t_annotate_2 <- annotateWithFeature(t_grange, n_grange, intersect.chr = TRUE)
+t_annotate_2
+```
+
+n.cpg
+```{r warning=FALSE, message=FALSE}
+n_annotate_1 <- annotateWithFeature(n_grange, cpgi, intersect.chr = TRUE)
+n_annotate_1
+```
+
+Annotation of genomic features by gene structures- Need a transcript features file that has four elements: exons, introns, promoters and transcription start sites
+
+Importing bed file
+```{r warning=FALSE, message=FALSE}
+gene_parts <- readTranscriptFeatures("Data/hg38.refseq.bed")
+```
+
+t.cpg
+```{r warning=FALSE, message=FALSE}
+t_annotate_3 <- annotateWithGeneParts(t_grange, gene_parts, intersect.chr = TRUE) 
+```
+
+n.cpg
+```{r warning=FALSE, message=FALSE}
+n_annotate_3 <- annotateWithGeneParts(n_grange, gene_parts, intersect.chr = TRUE)
+```
+
+Making a list of the output of t_annotate_3 and n_annotate_3 for plots
+```{r warning=FALSE, message=FALSE}
+annot.list <- list(t_annotate_3, n_annotate_3)
+
+plotGeneAnnotation(annot.list, cluster = TRUE)
+```
+
+## AnnotatR
+
+Downloading annotatr package
+```{r warning=FALSE, message=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("annotatr")
+```
+
+Downloading TxDb.Hsapiens.UCSC.hg38.knownGene Package
+```{r warning=FALSE, }
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("TxDb.Hsapiens.UCSC.hg38.knownGene")
+```
+
+Downloading org.Hs.eg.db Package
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("org.Hs.eg.db")
+```
+
+Loading library
+```{r warning=FALSE, message=FALSE}
+library(annotatr)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(org.Hs.eg.db)
+```
+
+Creating annotation vector
+```{r warning=FALSE, message=FALSE}
+annotate_1 <- c('hg38_cpgs', 'hg38_genes_introns', 'hg38_genes_cds', 'hg38_genes_exons', 'hg38_genes_promoters', 'hg38_basicgenes', 'hg38_genes_intergenic', 'hg38_cpg_islands', 'hg38_cpg_inter', 'hg38_enhancers_fantom')
+
+annots <- c('hg38_basicgenes', 'hg38_genes_intergenic', 'hg38_cpg_islands', 'hg38_cpg_inter', 'hg38_cpgs', 'hg38_enhancers_fantom')
+
+```
+
+Build_annotations creates a GRange object of all the annotations combined. 
+```{r warning=FALSE, message=FALSE}
+annotate_gr <- build_annotations(genome = 'hg38', annotations = annotate_1)
+```
+
+Intersecting the regions we read with annotations
+
+t.cpg
+```{r warning=FALSE, message=FALSE}
+annotated_t.cpg <- annotate_regions(regions = t_grange, 
+                                    annotations = annotate_gr, 
+                                    ignore.strand = TRUE,
+                                    quiet = FALSE)
+```
+
+n.cpg
+```{r warning=FALSE, message=FALSE}
+annotated_n.cpg <- annotate_regions(regions = n_grange,
+                                    annotations = annotate_gr,
+                                    ignore.strand = TRUE,
+                                    quiet = FALSE)
+```
+
+Converting the outputs to data frame
+```{r warning=FALSE, message=FALSE}
+df_annotated_t.cpg <- data.frame(annotated_t.cpg)
+
+df_annotated_n.cpg <- data.frame(annotated_n.cpg)
+```
+
+Summarising over annotations
+```{r warning=FALSE, message=FALSE}
+anno_t_summary <- summarize_annotations(annotated_regions = annotated_t.cpg,
+                                        quiet = TRUE)
+anno_n_summary <- summarize_annotations(annotated_regions = annotated_n.cpg,
+                                        quiet = TRUE)
+```
+
