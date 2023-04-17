@@ -1,0 +1,88 @@
+---
+title: "Gviz"
+output: html_document
+date: "2023-02-10"
+editor_options: 
+  chunk_output_type: console
+---
+
+Loading libraries
+```{r warning=FALSE, message=FALSE}
+library(Gviz)
+library(annotatr)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(org.Hs.eg.db)
+library(dplyr)
+library(GenomicRanges)
+library(ggplot2)
+```
+
+Data already loaded
+
+Making into a GRange object
+```{r warning=FALSE, message=FALSE}
+dmrs_grange=makeGRangesFromDataFrame(dmrs, 
+                                     keep.extra.columns = TRUE,
+                                     seqnames.field = "chr",
+                                     start.field = "start",
+                                     end.field = "end")
+```
+
+Creating annotation vector
+```{r warning=FALSE, message=FALSE}
+annotate_1=c('hg38_cpgs', 'hg38_genes_introns', 'hg38_genes_cds', 'hg38_genes_exons', 'hg38_genes_promoters', 'hg38_basicgenes', 'hg38_genes_intergenic', 'hg38_cpg_islands', 'hg38_cpg_shelves','hg38_cpg_shores', 'hg38_enhancers_fantom')
+```
+
+Building annotations
+```{r warning=FALSE, message=FALSE}
+annotate_gr=build_annotations(genome = 'hg38', annotations = annotate_1)
+```
+
+Intersect the regions we read in with annotations
+```{r warning=FALSE, message=FALSE}
+annotated_dmrs=annotate_regions(regions = dmrs_grange,
+                                annotations = annotate_gr,
+                                quiet=FALSE)
+```
+
+Converting output to data frame
+```{r warning=FALSE, message=FALSE}
+df_dmrs=data.frame(annotated_dmrs)
+```
+
+Filtering data for BCR gene only
+```{r warning=FALSE, message=FALSE}
+test_1=df_dmrs %>% 
+  filter(annot.symbol=="BCR")
+head(test_1)
+```
+
+Using Gviz- this step takes the grange
+```{r warning=FALSE, message=FALSE}
+atrack=AnnotationTrack(test_1, name = "CpG")
+```
+
+Adding genome axis track
+```{r warning=FALSE, message=FALSE}
+gtrack=GenomeAxisTrack()
+plotTracks(list(gtrack, atrack))
+```
+
+Ideogram
+```{r warning=FALSE, message=FALSE}
+itrack=IdeogramTrack(genome = "hg38", chromosome = "chr22")
+plotTracks(list(itrack, gtrack, atrack), from = 23.18e6, to = 23.31e6)
+```
+
+Data Tracks
+```{r warning=FALSE, message=FALSE}
+dtrack=DataTrack(test_1, genome="hg38", name = "Differential methylation tumour vs normal")
+plotTracks(dtrack, type= "histogram")
+```
+
+Heatmap
+```{r warning=FALSE, message=FALSE}
+plotTracks(dtrack, type=c("heatmap"))
+```
+
+
