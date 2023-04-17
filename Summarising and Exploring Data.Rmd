@@ -1,0 +1,254 @@
+---
+title: "Summarising and Exploring Data"
+output: html_document
+date: '2022-12-11'
+editor_options: 
+  chunk_output_type: console
+---
+
+## Week 2
+
+## Summarising and Data Exploration
+
+Importing the data- Data was already downloaded, imported the data directly. 
+
+Loading libraries
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(ggpubr)
+```
+
+Summary of the data- The summary of n.cpg and t.cpg are only taken since these were already filtered. 
+```{r warning=FALSE, message=FALSE}
+summary(n.cpg)
+
+summary(t.cpg)
+```
+
+Merging datasets
+```{r warning=FALSE, message=FALSE}
+merged <- bind_rows(n.cpg=n.cpg, t.cpg=t.cpg, .id = "id")
+
+colnames(merged)[1]="COLO829"
+```
+
+Removing random chromosomes in merged dataset
+```{r warning=FALSE, message=FALSE}
+final <- subset(merged, !(endsWith(V1, '_random') | endsWith(V1, 'v1') | endsWith(V1, 'v2') | endsWith(V1, 'BV')))
+```
+
+Density Plots of 4 datasets
+1. COLO829_1
+```{r warning=FALSE, message=FALSE}
+plot(density(colo829_1_filter$V11, na.rm = TRUE, xlab="Frequency"))
+```
+
+2. COLO829BL_1 
+```{r warning=FALSE, message=FALSE}
+plot(density(colo829bl_1_filter$frequency, na.rm = TRUE))
+```
+
+3. n.cpg 
+```{r warning=FALSE, message=FALSE}
+plot(density(n.cpg$V11, na.rm = TRUE), xlab="Frequency", main="Density plot of Frequency of Normal sample")
+```
+
+4. t.cpg
+```{r warning=FALSE, message=FALSE}
+plot(density(t.cpg$V11, na.rm = TRUE), xlab="Frequency", main="Density plot of Frequency of Tumour sample")
+```
+
+Density plot of t.cpg and n.cpg showing different strands on the same plot
+1. t.cpg
+```{r warning=FALSE, message=FALSE}
+ggplot(t.cpg, aes(x=V11, fill=V6, color=V6))+
+  geom_density(alpha=0.2)+
+  labs(x="Frequency", y="Strand", title = "Density plot of frequency showing strands")
+```
+
+2. n.cpg
+```{r warning=FALSE, message=FALSE}
+ggplot(n.cpg, aes(x=V11, fill=V6, color=V6))+
+  geom_density(alpha=0.2)+
+  labs(x="Frequency", y="Strand", title = "Density plot of frequency showing strands")
+```
+
+Density Plot of both the samples in the same graph segregated by forward or reverse strand
+1. Forward Strand
+```{r warning=FALSE, message=FALSE}
+strand_1 <- final %>% 
+  filter(V6=="+")
+
+plot_strand_1 <- strand_1 %>% 
+  ggplot(aes(x=V11, colour=COLO829))+
+  geom_density(alpha=0.2)+
+  labs(x="Methylation Frequency (%)", title = "Density plot of Methylation Frequency of Forward strand")
+```
+
+2. Reverse Strand
+```{r warning=FALSE, message=FALSE}
+strand_2 <- final %>% 
+  filter(V6=="-")
+
+plot_strand_2 <- strand_2 %>% 
+  ggplot(aes(x=V11, colour=COLO829))+
+  geom_density(alpha=0.2)+
+  labs(x="Methylation Frequency (%)", title = "Density plot of Methylation Frequency of Reverse Strand")
+```
+
+Box plot of t.cpg and n.cpg datasets of different strands in the same plot
+1. t.cpg
+```{r warning=FALSE, message=FALSE}
+ggplot(t.cpg, aes(x=V6, y=V11, fill=V6))+
+  geom_boxplot()+
+  labs(x="Strand", y="Frequency", title="Plot of frequency with respect to strand")+
+  theme_classic()
+```
+
+2. n.cpg
+```{r warning=FALSE, message=FALSE}
+ggplot(n.cpg, aes(x=V6, y=V11, fill=V6))+
+  geom_boxplot()+
+  labs(x="Strand", y="Frequency", title="Plot of frequency with respect to strand")+
+  theme_classic()
+```
+
+Box plot of different chromosomes
+1. t.cpg
+```{r warning=FALSE, message=FALSE}
+ggplot(t_cpg_filter, aes(x=seq_name, y=frequency))+geom_boxplot()
+```
+
+2. n.cpg
+```{r warning=FALSE, message=FALSE}
+ggplot(n.cpg, aes(x=V1, y=V11, fill=V1))+
+  geom_boxplot()+
+  labs(x="Chromosome", y="Frequency", title = "Plot of chromosome and their frequency")+
+  theme(axis.text.x = element_text(angle=90, hjust = 1))+
+  coord_flip()
+```
+
+Boxplots of different chromosomes
+```{r warning=FALSE, message=FALSE}
+subset_1 <- final %>% 
+  filter(V1=="chr21")
+
+subset_2 <- final %>% 
+  filter(V1=="chr22")
+
+subset_3 <- final %>% 
+  filter(V1=="chrX")
+
+subset_4 <- final %>% 
+  filter(V1=="chrY")
+
+comparison=list(c("n.cpg", "t.cpg"))
+
+plot_1 <- ggplot(subset_1, aes(x=COLO829, y=V11, fill=COLO829))+
+  geom_boxplot()+
+  labs(x="Sample", y="Methylation Frequency (%)", title = "Chromosome21")+
+  stat_compare_means(comparisons = comparison, paired = FALSE, method = "wilcox", label = "p.format")+stat_boxplot()
+
+plot_2 <- ggplot(subset_2, aes(x=COLO829, y=V11, fill=COLO829))+
+  geom_boxplot()+
+  labs(x="Sample", y="Methylation Frequency (%)", title = "Chromosome22")+
+  stat_compare_means(comparisons = comparison, paired = FALSE, method = "wilcox", label = "p.format")+stat_boxplot()
+
+plot_3 <- ggplot(subset_3, aes(x=COLO829, y=V11, fill=COLO829))+
+  geom_boxplot()+
+  labs(x="Sample",y="Methylation Frequency (%)", title = "ChromosomeX")+
+  stat_compare_means(comparisons = comparison, paired = FALSE, method = "wilcox", label = "p.format")+stat_boxplot()
+
+plot_4 <- ggplot(subset_4, aes(x=COLO829, y=V11, fill=COLO829))+
+  geom_boxplot()+
+  labs(x="Sample", y="Methylation Frequency (%)", title = "ChromosomeY")+
+  stat_compare_means(comparisons = comparison, paired = FALSE, method = "wilcox", label = "p.format")+stat_boxplot()
+
+plot <- ggarrange(plot_3, plot_4, ncol = 2, nrow = 1, common.legend = TRUE, legend = "bottom")
+annotate_figure(plot, top = text_grob("Boxplot plot of COLO829", face = "bold", size = 14))
+
+```
+
+Boxplot for Forward strand of both samples in the same plot
+```{r warning=FALSE, message=FALSE}
+strand_1 <- final %>% 
+  filter(V6=="+")
+
+comparison=list(c("n.cpg", "t.cpg"))
+
+strand_box_1 <- strand_1 %>% 
+  ggplot(aes(x=COLO829, y=V11, fill=COLO829))+
+  geom_boxplot()+
+  labs(x="Sample", y="Methylation Frequency (%)", title="Plot of Methylation Frequency of Forward Strand")+
+  stat_compare_means(comparisons = comparison, paired = FALSE, method = "wilcox", label = "p.format")+stat_boxplot()
+```
+
+Boxplot for Reverse strand of both samples in the same plot
+```{r warning=FALSE, message=FALSE}
+strand_2 <- final %>% 
+  filter(V6=="-")
+
+comparison=list(c("n.cpg", "t.cpg"))
+
+strand_box_2 <- strand_2 %>% 
+  ggplot(aes(x=COLO829, y=V11, fill=COLO829))+
+  geom_boxplot()+
+  labs(x="Sample", y="Methylation Frequency (%)", title="Plot of Methylation Frequency of Reverse Strand")+
+  stat_compare_means(comparisons = comparison, paired = FALSE, method = "wilcox", label = "p.format")+stat_boxplot()
+```
+
+Wilcox Test on each chromosome
+```{r warning=FALSE, message=FALSE}
+wilcox_dt=data.frame()
+
+for (i in unique(final$V1)){
+  xi= final[which(final[, "V1"] %in% i), ]
+  xi_n=xi[which(xi$COLO829 %in% "n.cpg"), ]
+  xi_t=xi[which(xi$COLO829 %in% "t.cpg"), ]
+
+  wilx_i=wilcox.test(xi_t$V11, xi_n$V11)
+  mean_diff_i=mean(xi_t$V11, na.rm=TRUE)-mean(xi_n$V11, na.rm=TRUE)
+  out=rbind(c(i, round(mean_diff_i,5), wilx_i$p.value))
+  
+  wilcox_dt=rbind.data.frame(out, wilcox_dt)
+  
+  print(i)
+  
+}
+
+colnames(wilcox_dt)=c("chr", "mean_diff", "p.value")
+
+all.chr=paste0("chr", c(1:22, "X", "Y"))
+
+wilcox_dt=wilcox_dt[wilcox_dt$chr %in% all.chr, ]
+wilcox_dt$mean_diff=as.numeric(wilcox_dt$mean_diff)
+wilcox_dt$p.value=as.numeric(wilcox_dt$p.value)
+
+wilcox_dt$adjusted.pvalue=p.adjust(wilcox_dt$p.value, method = "BH")
+```
+
+Density Plots of each chromosome of the samples in the same plot
+```{r warning=FALSE, message=FALSE}
+plot_1 <- ggplot(subset_1, aes(x=V11, colour=COLO829))+
+  geom_density()+
+  labs(x="Methylation Frequency (%)", title = "ChromosomeM")
+
+plot_2 <- ggplot(subset_2, aes(x=V11, colour=COLO829))+
+  geom_density()+
+  labs(x="Methylation Frequency (%)", title = "Chromosome22")
+
+plot_3 <-ggplot(subset_3, aes(x=V11, colour=COLO829))+
+  geom_density()+
+  labs(x="Methylation Frequency (%)", title = "ChromosomeX")
+
+plot_4 <- ggplot(subset_4, aes(x=V11, colour=COLO829))+
+  geom_density()+
+  labs(x="Methylation Frequency (%)", title = "ChromosomeY")
+
+plot <- ggarrange(plot_1, plot_2, plot_3, plot_4, ncol = 2, nrow = 2, common.legend = TRUE, legend = "bottom")
+annotate_figure(plot, top = text_grob("Density plot of COLO829", face = "bold", size = 14))
+```
+
+
+
+
